@@ -271,6 +271,7 @@ func (c LegacyRESTStorageProvider) NewLegacyRESTStorage(restOptionsGetter generi
 		c.ProxyTransport)
 
 	// rest map for cores
+	// 1.4.2.1 关注这里的storage map，比较核心的api定义都在这里
 	restStorageMap := map[string]rest.Storage{
 		"pods":             podStorage.Pod,
 		"pods/attach":      podStorage.Attach,

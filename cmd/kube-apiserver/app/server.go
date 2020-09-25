@@ -162,32 +162,39 @@ func Run(completeOptions completedServerRunOptions, stopCh <-chan struct{}) erro
 	// To help debugging, immediately log version
 	klog.Infof("Version: %+v", version.Get())
 
+	// 1.主要是准备好server，最终返回的是一个aggregate server，重点关注
 	server, err := CreateServerChain(completeOptions, stopCh)
 	if err != nil {
 		return err
 	}
 
+	// 2.运行准备的事情，没做太多事情
 	prepared, err := server.PrepareRun()
 	if err != nil {
 		return err
 	}
 
+	// 3.
 	return prepared.Run(stopCh)
 }
 
 // CreateServerChain creates the apiservers connected via delegation.
 func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan struct{}) (*aggregatorapiserver.APIAggregator, error) {
+	// 1.1 创建NodeDialer, 大概是用来kubelet exec 的
 	nodeTunneler, proxyTransport, err := CreateNodeDialer(completedOptions)
 	if err != nil {
 		return nil, err
 	}
 
+	// 1.2 创建apiserver运行需要的所有资源，但是不运行。
+	// 在实际运行组件之前先准备好所有资源。
 	kubeAPIServerConfig, insecureServingInfo, serviceResolver, pluginInitializer, err := CreateKubeAPIServerConfig(completedOptions, nodeTunneler, proxyTransport)
 	if err != nil {
 		return nil, err
 	}
 
 	// If additional API servers are added, they should be gated.
+	// 1.3 创建extension server，这里和主kubeAPIServer的包含关系？
 	apiExtensionsConfig, err := createAPIExtensionsConfig(*kubeAPIServerConfig.GenericConfig, kubeAPIServerConfig.ExtraConfig.VersionedInformers, pluginInitializer, completedOptions.ServerRunOptions, completedOptions.MasterCount,
 		serviceResolver, webhook.NewDefaultAuthenticationInfoResolverWrapper(proxyTransport, kubeAPIServerConfig.GenericConfig.EgressSelector, kubeAPIServerConfig.GenericConfig.LoopbackClientConfig))
 	if err != nil {
@@ -198,12 +205,14 @@ func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan
 		return nil, err
 	}
 
+	// 1.4 这里是核心kubeAPIServer，但是后面只用到了kubeAPIServer.GenericAPIServer
 	kubeAPIServer, err := CreateKubeAPIServer(kubeAPIServerConfig, apiExtensionsServer.GenericAPIServer)
 	if err != nil {
 		return nil, err
 	}
 
 	// aggregator comes last in the chain
+	// 1.5 创建聚合server，将前面两个聚合？
 	aggregatorConfig, err := createAggregatorConfig(*kubeAPIServerConfig.GenericConfig, completedOptions.ServerRunOptions, kubeAPIServerConfig.ExtraConfig.VersionedInformers, serviceResolver, proxyTransport, pluginInitializer)
 	if err != nil {
 		return nil, err
@@ -214,6 +223,7 @@ func CreateServerChain(completedOptions completedServerRunOptions, stopCh <-chan
 		return nil, err
 	}
 
+	// 1.6 如果需要的话，创建不安全（无需认证）的apiserver
 	if insecureServingInfo != nil {
 		insecureHandlerChain := kubeserver.BuildInsecureHandlerChain(aggregatorServer.GenericAPIServer.UnprotectedHandler(), kubeAPIServerConfig.GenericConfig)
 		if err := insecureServingInfo.Serve(insecureHandlerChain, kubeAPIServerConfig.GenericConfig.RequestTimeout, stopCh); err != nil {

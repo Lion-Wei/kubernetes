@@ -102,6 +102,8 @@ func (g *APIGroupVersion) InstallREST(container *restful.Container) error {
 		minRequestTimeout: g.MinRequestTimeout,
 	}
 
+	// 1.4.3.3.1.1.1 构造installer并执行Install
+	// 这里构造Installer包含所有信息，执行安装，设计模式
 	apiResources, ws, registrationErrors := installer.Install()
 	versionDiscoveryHandler := discovery.NewAPIVersionHandler(g.Serializer, g.GroupVersion, staticLister{apiResources})
 	versionDiscoveryHandler.AddToWebService(ws)

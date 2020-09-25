@@ -278,9 +278,11 @@ func (s *APIAggregator) PrepareRun() (preparedAPIAggregator, error) {
 		})
 	}
 
+	// 2.1 执行GenericAPIServer 自身的prepareRun，包含healthz，livez相关的接口初始化
 	prepared := s.GenericAPIServer.PrepareRun()
 
 	// delay OpenAPI setup until the delegate had a chance to setup their OpenAPI handlers
+	// 2.2 初始化openAPI
 	if s.openAPIConfig != nil {
 		specDownloader := openapiaggregator.NewDownloader()
 		openAPIAggregator, err := openapiaggregator.BuildAndRegisterAggregator(

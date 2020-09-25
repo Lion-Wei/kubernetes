@@ -136,6 +136,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 	}
 
 	apiResourceConfig := c.GenericConfig.MergedResourceConfig
+	// 1.3.2.1 初始化各种storage，各个版本的crd/status
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(apiextensions.GroupName, Scheme, metav1.ParameterCodec, Codecs)
 	if apiResourceConfig.VersionEnabled(v1beta1.SchemeGroupVersion) {
 		storage := map[string]rest.Storage{}
@@ -162,6 +163,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		apiGroupInfo.VersionedResourcesStorageMap[v1.SchemeGroupVersion.Version] = storage
 	}
 
+	// 1.3.2.2 installapi -->// 1.4.3.3.1
 	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
 		return nil, err
 	}

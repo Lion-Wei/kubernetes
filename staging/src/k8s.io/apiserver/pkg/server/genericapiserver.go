@@ -330,11 +330,13 @@ func (s preparedGenericAPIServer) Run(stopCh <-chan struct{}) error {
 	}()
 
 	// close socket after delayed stopCh
+	// 3.1 NonBlockingRun
 	stoppedCh, err := s.NonBlockingRun(delayedStopCh)
 	if err != nil {
 		return err
 	}
 
+	// 3.2 阻塞等待stop信号
 	<-stopCh
 
 	// run shutdown hooks directly. This includes deregistering from the kubernetes endpoint in case of kube-apiserver.
@@ -420,6 +422,7 @@ func (s *GenericAPIServer) installAPIResources(apiPrefix string, apiGroupInfo *A
 		apiGroupVersion.OpenAPIModels = openAPIModels
 		apiGroupVersion.MaxRequestBodyBytes = s.maxRequestBodyBytes
 
+		// 1.4.3.3.1.1 遍历各个api group的version，install
 		if err := apiGroupVersion.InstallREST(s.Handler.GoRestfulContainer); err != nil {
 			return fmt.Errorf("unable to setup API %v: %v", apiGroupInfo, err)
 		}
@@ -468,6 +471,7 @@ func (s *GenericAPIServer) InstallAPIGroups(apiGroupInfos ...*APIGroupInfo) erro
 	}
 
 	for _, apiGroupInfo := range apiGroupInfos {
+		// 1.4.3.3.1 遍历，install
 		if err := s.installAPIResources(APIGroupPrefix, apiGroupInfo, openAPIModels); err != nil {
 			return fmt.Errorf("unable to install api resources: %v", err)
 		}

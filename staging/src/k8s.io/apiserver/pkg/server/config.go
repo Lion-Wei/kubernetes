@@ -533,6 +533,7 @@ func (c completedConfig) New(name string, delegationTarget DelegationTarget) (*G
 	handlerChainBuilder := func(handler http.Handler) http.Handler {
 		return c.BuildHandlerChainFunc(handler, c.Config)
 	}
+	// 1.4.1.1 初始化apiserver handler, 主要是gorestfulContainer
 	apiServerHandler := NewAPIServerHandler(name, c.Serializer, handlerChainBuilder, delegationTarget.UnprotectedHandler())
 
 	s := &GenericAPIServer{

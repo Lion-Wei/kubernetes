@@ -37,6 +37,7 @@ import (
 	"k8s.io/kubernetes/cmd/kube-apiserver/app/options"
 )
 
+// 1.3.1 初始化config，预留
 func createAPIExtensionsConfig(
 	kubeAPIServerConfig genericapiserver.Config,
 	externalInformers kubeexternalinformers.SharedInformerFactory,
@@ -99,5 +100,6 @@ func createAPIExtensionsConfig(
 }
 
 func createAPIExtensionsServer(apiextensionsConfig *apiextensionsapiserver.Config, delegateAPIServer genericapiserver.DelegationTarget) (*apiextensionsapiserver.CustomResourceDefinitions, error) {
+	// 1.3.2 创建extension相关的server，包含crd的？
 	return apiextensionsConfig.Complete().New(delegateAPIServer)
 }

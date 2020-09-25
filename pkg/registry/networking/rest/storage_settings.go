@@ -56,6 +56,7 @@ func (p RESTStorageProvider) NewRESTStorage(apiResourceConfigSource serverstorag
 	return apiGroupInfo, true, nil
 }
 
+// 1.4.3.1.1 生成group/version下面的各个storage，这里storage用于最终handler的生成
 func (p RESTStorageProvider) v1Storage(apiResourceConfigSource serverstorage.APIResourceConfigSource, restOptionsGetter generic.RESTOptionsGetter) (map[string]rest.Storage, error) {
 	storage := map[string]rest.Storage{}
 	// networkpolicies

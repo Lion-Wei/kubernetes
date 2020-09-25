@@ -108,6 +108,7 @@ func (a *APIInstaller) Install() ([]metav1.APIResource, *restful.WebService, []e
 	}
 	sort.Strings(paths)
 	for _, path := range paths {
+		// 1.4.3.3.1.1.1.1 一个api/group/version包含很多path（资源对象），分别注册handler，registerResourceHandlers
 		apiResource, err := a.registerResourceHandlers(path, a.group.Storage[path], ws)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("error in registering resource: %s, %v", path, err))

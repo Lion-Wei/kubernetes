@@ -339,6 +339,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		return nil, fmt.Errorf("Master.New() called with empty config.KubeletClientConfig")
 	}
 
+	// 1.4.1 创建包含handling chain的server，这大概是比较核心的部分之一
 	s, err := c.GenericConfig.New("kube-apiserver", delegationTarget)
 	if err != nil {
 		return nil, err
@@ -348,6 +349,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		routes.Logs{}.Install(s.Handler.GoRestfulContainer)
 	}
 
+	// 尚处于alpha版本的特性，暂不关注
 	if utilfeature.DefaultFeatureGate.Enabled(features.ServiceAccountIssuerDiscovery) {
 		// Metadata and keys are expected to only change across restarts at present,
 		// so we just marshal immediately and serve the cached JSON bytes.
@@ -387,6 +389,8 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 	}
 
 	// install legacy rest storage
+	// 1.4.2 安装legacy REST storage，下层调用与1.14.3相同，不再深入看了
+	// apiserver中的legacy api是遗留api的意思？
 	if c.ExtraConfig.APIResourceConfigSource.VersionEnabled(apiv1.SchemeGroupVersion) {
 		legacyRESTStorageProvider := corerest.LegacyRESTStorageProvider{
 			StorageFactory:              c.ExtraConfig.StorageFactory,
@@ -407,6 +411,7 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		}
 	}
 
+	// 1.4.3 安装普通API，这里 RESTStorageProvider 具体是什么概念，以及安装过程是啥？
 	// The order here is preserved in discovery.
 	// If resources with identical names exist in more than one of these groups (e.g. "deployments.apps"" and "deployments.extensions"),
 	// the order of this list determines which group an unqualified resource name (e.g. "deployments") should prefer.
@@ -441,10 +446,12 @@ func (c completedConfig) New(delegationTarget genericapiserver.DelegationTarget)
 		return nil, err
 	}
 
+	// 1.4.4 安装runner，用于exec
 	if c.ExtraConfig.Tunneler != nil {
 		m.installTunneler(c.ExtraConfig.Tunneler, corev1client.NewForConfigOrDie(c.GenericConfig.LoopbackClientConfig).Nodes())
 	}
 
+	// 1.4.5 添加 post start hook函数，这里只添加，不执行
 	m.GenericAPIServer.AddPostStartHookOrDie("start-cluster-authentication-info-controller", func(hookContext genericapiserver.PostStartHookContext) error {
 		kubeClient, err := kubernetes.NewForConfig(hookContext.LoopbackClientConfig)
 		if err != nil {
@@ -528,6 +535,7 @@ func (m *Instance) InstallAPIs(apiResourceConfigSource serverstorage.APIResource
 			klog.V(1).Infof("Skipping disabled API group %q.", groupName)
 			continue
 		}
+		// 1.4.3.1 遍历provider，调NewRESTStorage方法，获取apiGroupInfo
 		apiGroupInfo, enabled, err := restStorageBuilder.NewRESTStorage(apiResourceConfigSource, restOptionsGetter)
 		if err != nil {
 			return fmt.Errorf("problem initializing API group %q : %v", groupName, err)
@@ -538,6 +546,7 @@ func (m *Instance) InstallAPIs(apiResourceConfigSource serverstorage.APIResource
 		}
 		klog.V(1).Infof("Enabling API group %q.", groupName)
 
+		// 1.4.3.2 遍历provider，如果有postStart hook的话，注册
 		if postHookProvider, ok := restStorageBuilder.(genericapiserver.PostStartHookProvider); ok {
 			name, hook, err := postHookProvider.PostStartHook()
 			if err != nil {
@@ -549,6 +558,7 @@ func (m *Instance) InstallAPIs(apiResourceConfigSource serverstorage.APIResource
 		apiGroupsInfo = append(apiGroupsInfo, &apiGroupInfo)
 	}
 
+	// 1.4.3.3 安装刚才收集的apiGroupsInfo
 	if err := m.GenericAPIServer.InstallAPIGroups(apiGroupsInfo...); err != nil {
 		return fmt.Errorf("error in registering group versions: %v", err)
 	}
