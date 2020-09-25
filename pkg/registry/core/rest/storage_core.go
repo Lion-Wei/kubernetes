@@ -270,6 +270,7 @@ func (c LegacyRESTStorageProvider) NewLegacyRESTStorage(restOptionsGetter generi
 		serviceNodePortAllocator,
 		c.ProxyTransport)
 
+	// rest map for cores
 	restStorageMap := map[string]rest.Storage{
 		"pods":             podStorage.Pod,
 		"pods/attach":      podStorage.Attach,

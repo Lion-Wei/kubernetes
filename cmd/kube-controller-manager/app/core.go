@@ -111,6 +111,7 @@ func startNodeIpamController(ctx ControllerContext) (http.Handler, bool, error) 
 	}
 
 	// failure: more than one cidr and dual stack is not enabled
+	// 解析cluster cidr与双栈
 	if len(clusterCIDRs) > 1 && !utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack) {
 		return nil, false, fmt.Errorf("len of ClusterCIDRs==%v and dualstack feature is not enabled", len(clusterCIDRs))
 	}

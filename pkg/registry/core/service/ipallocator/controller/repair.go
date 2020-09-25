@@ -123,6 +123,7 @@ func (c *Repair) selectAllocForIP(ip net.IP, primary ipallocator.Interface, seco
 }
 
 // shouldWorkOnSecondary returns true if the repairer should perform work for secondary network (dual stack)
+// 判断service需要分配两个IP
 func (c *Repair) shouldWorkOnSecondary() bool {
 	if !utilfeature.DefaultFeatureGate.Enabled(features.IPv6DualStack) {
 		return false

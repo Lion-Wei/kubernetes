@@ -472,6 +472,7 @@ func (kl *Kubelet) tryUpdateNodeStatus(tryNumber int) error {
 
 	podCIDRChanged := false
 	if len(node.Spec.PodCIDRs) != 0 {
+		// kubelet更新pod cidr
 		// Pod CIDR could have been updated before, so we cannot rely on
 		// node.Spec.PodCIDR being non-empty. We also need to know if pod CIDR is
 		// actually changed.

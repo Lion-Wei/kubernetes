@@ -189,6 +189,7 @@ func (rs *REST) Create(ctx context.Context, obj runtime.Object, createValidation
 	var err error
 	if !dryrun.IsDryRun(options.DryRun) {
 		if service.Spec.Type != api.ServiceTypeExternalName {
+			// 为svc分配ip
 			allocator := rs.getAllocatorBySpec(service)
 			if releaseServiceIP, err = initClusterIP(service, allocator); err != nil {
 				return nil, err

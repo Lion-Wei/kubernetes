@@ -258,6 +258,7 @@ func (r *rangeAllocator) AllocateOrOccupyCIDR(node *v1.Node) error {
 		return r.occupyCIDRs(node)
 	}
 	// allocate and queue the assignment
+	// 为node分配cidr
 	allocated := nodeReservedCIDRs{
 		nodeName:       node.Name,
 		allocatedCIDRs: make([]*net.IPNet, len(r.cidrSets)),

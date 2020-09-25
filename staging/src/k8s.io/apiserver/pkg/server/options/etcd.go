@@ -225,6 +225,7 @@ type SimpleRestOptionsFactory struct {
 	Options EtcdOptions
 }
 
+// 组件optsGetter用于生成其他各个资源对象的storage
 func (f *SimpleRestOptionsFactory) GetRESTOptions(resource schema.GroupResource) (generic.RESTOptions, error) {
 	ret := generic.RESTOptions{
 		StorageConfig:           &f.Options.StorageConfig,
@@ -246,6 +247,7 @@ func (f *SimpleRestOptionsFactory) GetRESTOptions(resource schema.GroupResource)
 		if ok && size <= 0 {
 			ret.Decorator = generic.UndecoratedStorage
 		} else {
+			// 创建带cache的store
 			ret.Decorator = genericregistry.StorageWithCacher()
 		}
 	}

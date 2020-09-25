@@ -601,6 +601,7 @@ func Complete(s *options.ServerRunOptions) (completedServerRunOptions, error) {
 
 	// process s.ServiceClusterIPRange from list to Primary and Secondary
 	// we process secondary only if provided by user
+	// apiserver解析两个service IP range（CIDR），用于svc ip分配
 	apiServerServiceIP, primaryServiceIPRange, secondaryServiceIPRange, err := getServiceIPAndRanges(s.ServiceClusterIPRanges)
 	if err != nil {
 		return options, err

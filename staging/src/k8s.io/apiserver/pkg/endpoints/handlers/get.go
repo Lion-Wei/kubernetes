@@ -259,6 +259,7 @@ func ListResource(r rest.Lister, rw rest.Watcher, scope *RequestScope, forceWatc
 			klog.V(3).InfoS("Starting watch", "path", req.URL.Path, "resourceVersion", opts.ResourceVersion, "labels", opts.LabelSelector, "fields", opts.FieldSelector, "timeout", timeout)
 			ctx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
+			// 2. 调用对应资源的store watch接口，获取watcher，
 			watcher, err := rw.Watch(ctx, &opts)
 			if err != nil {
 				scope.err(err, w, req)

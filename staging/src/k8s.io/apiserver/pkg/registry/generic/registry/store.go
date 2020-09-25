@@ -1106,6 +1106,9 @@ func (e *Store) finalizeDelete(ctx context.Context, obj runtime.Object, runHooks
 // WatchPredicate. If possible, you should customize PredicateFunc to produce
 // a matcher that matches by key. SelectionPredicate does this for you
 // automatically.
+// 这里的store应该不是直接对etcd 的store，是外部请求进来的实际执行函数
+// 它作为一个通用的框架，其他资源可以在它基础上定制化
+// 2.1 资源对象生成watcher，
 func (e *Store) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
 	label := labels.Everything()
 	if options != nil && options.LabelSelector != nil {

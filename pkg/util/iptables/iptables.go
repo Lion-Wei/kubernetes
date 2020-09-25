@@ -414,9 +414,11 @@ func (runner *runner) restoreInternal(args []string, data []byte, flush FlushFla
 	fullArgs := append(runner.restoreWaitFlag, args...)
 	iptablesRestoreCmd := iptablesRestoreCommand(runner.protocol)
 	klog.V(4).Infof("running %s %v", iptablesRestoreCmd, fullArgs)
+	start := time.Now()
 	cmd := runner.exec.Command(iptablesRestoreCmd, fullArgs...)
 	cmd.SetStdin(bytes.NewBuffer(data))
 	b, err := cmd.CombinedOutput()
+	klog.V(4).Infof("Run restore %s take time %v, got err %v", runner.protocol, time.Now().Sub(start), err)
 	if err != nil {
 		return fmt.Errorf("%v (%s)", err, b)
 	}

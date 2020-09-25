@@ -238,6 +238,7 @@ func (plugin *kubenetNetworkPlugin) Event(name string, details map[string]interf
 	plugin.mu.Lock()
 	defer plugin.mu.Unlock()
 
+	// podCIDR 变为 podCIDRs，允许多个cidr
 	podCIDR, ok := details[network.NET_PLUGIN_EVENT_POD_CIDR_CHANGE_DETAIL_CIDR].(string)
 	if !ok {
 		klog.Warningf("%s event didn't contain pod CIDR", network.NET_PLUGIN_EVENT_POD_CIDR_CHANGE)

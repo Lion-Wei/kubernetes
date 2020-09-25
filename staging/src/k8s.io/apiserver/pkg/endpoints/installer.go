@@ -182,6 +182,7 @@ func GetResourceKind(groupVersion schema.GroupVersion, storage rest.Storage, typ
 	return fqKindToRegister, nil
 }
 
+// registerResourceHandlers注册资源处理函数
 func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storage, ws *restful.WebService) (*metav1.APIResource, error) {
 	admit := a.group.Admit
 
@@ -872,12 +873,14 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 			addParams(route, action.Params)
 			routes = append(routes, route)
 		// deprecated in 1.11
+		// watch 行为处理
 		case "WATCH": // Watch a resource.
 			doc := "watch changes to an object of kind " + kind
 			if isSubresource {
 				doc = "watch changes to " + subresource + " of an object of kind " + kind
 			}
 			doc += ". deprecated: use the 'watch' parameter with a list operation instead, filtered to a single item with the 'fieldSelector' parameter."
+			// 1. 生成handler，这里会使用restfulListResource函数
 			handler := metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, restfulListResource(lister, watcher, reqScope, true, a.minRequestTimeout))
 			if enableWarningHeaders {
 				handler = utilwarning.AddWarningsHandler(handler, warnings)

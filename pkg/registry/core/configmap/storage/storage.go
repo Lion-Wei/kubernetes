@@ -36,6 +36,7 @@ type REST struct {
 
 // NewREST returns a RESTStorage object that will work with ConfigMap objects.
 func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, error) {
+	// 这里的store封装了对etcd的操作
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &api.ConfigMap{} },
 		NewListFunc:              func() runtime.Object { return &api.ConfigMapList{} },

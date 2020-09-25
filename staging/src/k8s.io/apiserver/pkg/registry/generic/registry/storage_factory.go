@@ -45,6 +45,7 @@ func StorageWithCacher() generic.StorageDecorator {
 		triggerFuncs storage.IndexerFuncs,
 		indexers *cache.Indexers) (storage.Interface, factory.DestroyFunc, error) {
 
+		// 这里创建的是实际的对etcd的storage
 		s, d, err := generic.NewRawStorage(storageConfig, newFunc)
 		if err != nil {
 			return s, d, err
@@ -65,6 +66,7 @@ func StorageWithCacher() generic.StorageDecorator {
 			Indexers:       indexers,
 			Codec:          storageConfig.Codec,
 		}
+		// cacher实现apiserver\pkg\storage.Interface接口，watch请求首先调用该方法下的Watch方法
 		cacher, err := cacherstorage.NewCacherFromConfig(cacherConfig)
 		if err != nil {
 			return nil, func() {}, err
