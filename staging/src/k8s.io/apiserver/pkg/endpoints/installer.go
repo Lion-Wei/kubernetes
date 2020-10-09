@@ -97,6 +97,7 @@ var toDiscoveryKubeVerb = map[string]string{
 func (a *APIInstaller) Install() ([]metav1.APIResource, *restful.WebService, []error) {
 	var apiResources []metav1.APIResource
 	var errors []error
+	// 初始化ws
 	ws := a.newWebService()
 
 	// Register the paths in a deterministic (sorted) order to get a deterministic swagger spec.
@@ -109,6 +110,7 @@ func (a *APIInstaller) Install() ([]metav1.APIResource, *restful.WebService, []e
 	sort.Strings(paths)
 	for _, path := range paths {
 		// 1.4.3.3.1.1.1.1 一个api/group/version包含很多path（资源对象），分别注册handler，registerResourceHandlers
+		// 为每个路径生成handler，并注册到router上，添加到ws
 		apiResource, err := a.registerResourceHandlers(path, a.group.Storage[path], ws)
 		if err != nil {
 			errors = append(errors, fmt.Errorf("error in registering resource: %s, %v", path, err))
@@ -931,10 +933,12 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 				if isSubresource {
 					doc = "connect " + method + " requests to " + subresource + " of " + kind
 				}
+				// 生成handler
 				handler := metrics.InstrumentRouteFunc(action.Verb, group, version, resource, subresource, requestScope, metrics.APIServerComponent, deprecated, removedRelease, restfulConnectResource(connecter, reqScope, admit, path, isSubresource))
 				if enableWarningHeaders {
 					handler = utilwarning.AddWarningsHandler(handler, warnings)
 				}
+				// handler注册到route
 				route := ws.Method(method).Path(action.Path).
 					To(handler).
 					Doc(doc).
@@ -961,6 +965,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 			return nil, fmt.Errorf("unrecognized action verb: %s", action.Verb)
 		}
 		for _, route := range routes {
+			// routes添加到ws
 			route.Metadata(ROUTE_META_GVK, metav1.GroupVersionKind{
 				Group:   reqScope.Kind.Group,
 				Version: reqScope.Kind.Version,

@@ -76,6 +76,7 @@ func NewAPIServerHandler(name string, s runtime.NegotiatedSerializer, handlerCha
 		nonGoRestfulMux.NotFoundHandler(notFoundHandler)
 	}
 
+	// 1. 初始化gorestfulContainer，restful模型中的container
 	gorestfulContainer := restful.NewContainer()
 	gorestfulContainer.ServeMux = http.NewServeMux()
 	gorestfulContainer.Router(restful.CurlyRouter{}) // e.g. for proxy/{kind}/{name}/{*}
@@ -86,6 +87,7 @@ func NewAPIServerHandler(name string, s runtime.NegotiatedSerializer, handlerCha
 		serviceErrorHandler(s, serviceErr, request, response)
 	})
 
+	// 因为存在gorestfulContainer和nonGoRestfulMux两种形式的，有一个director进行分发，director提供ServeHTTP接口。
 	director := director{
 		name:               name,
 		goRestfulContainer: gorestfulContainer,
@@ -133,6 +135,7 @@ func (d director) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				klog.V(5).Infof("%v: %v %q satisfied by gorestful with webservice %v", d.name, req.Method, path, ws.RootPath())
 				// don't use servemux here because gorestful servemuxes get messed up when removing webservices
 				// TODO fix gorestful, remove TPRs, or stop using gorestful
+				// 调用container的dispatch，处理请求。
 				d.goRestfulContainer.Dispatch(w, req)
 				return
 			}
