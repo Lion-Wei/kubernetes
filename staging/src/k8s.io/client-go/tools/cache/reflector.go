@@ -63,8 +63,10 @@ type Reflector struct {
 	// The GVK of the object we expect to place in the store if unstructured.
 	expectedGVK *schema.GroupVersionKind
 	// The destination to sync up with the watch source
+	// cacher中的watchCache
 	store Store
 	// listerWatcher is used to perform lists and watches.
+	// etcd storage生成的lw
 	listerWatcher ListerWatcher
 
 	// backoff manages backoff of ListWatch
@@ -251,12 +253,15 @@ func (r *Reflector) resyncChan() (<-chan time.Time, func() bool) {
 // ListAndWatch first lists all items and get the resource version at the moment of call,
 // and then use the resource version to watch.
 // It returns error if ListAndWatch didn't even try to initialize watch.
+// Reflector类似client中的reconciler,从etcd中获取数据并写入cache
+// 以这里为入口看看一个事件从etcd到发给client端的过程
 func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 	klog.V(3).Infof("Listing and watching %v from %s", r.expectedTypeName, r.name)
 	var resourceVersion string
 
 	options := metav1.ListOptions{ResourceVersion: r.relistResourceVersion()}
 
+	// 1. list etcd,拿到对象并发给store(watchCache)
 	if err := func() error {
 		initTrace := trace.New("Reflector ListAndWatch", trace.Field{"name", r.name})
 		defer initTrace.LogIfLong(10 * time.Second)
@@ -274,6 +279,7 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 			// Attempt to gather list in chunks, if supported by listerWatcher, if not, the first
 			// list request will return the full response.
 			pager := pager.New(pager.SimplePageFunc(func(opts metav1.ListOptions) (runtime.Object, error) {
+				// 1.1 调etcd list
 				return r.listerWatcher.List(opts)
 			}))
 			switch {
@@ -339,6 +345,7 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 
 		r.setIsLastSyncResourceVersionUnavailable(false) // list was successful
 		initTrace.Step("Objects listed")
+		// 1.2 list得到的对象处理
 		listMetaInterface, err := meta.ListAccessor(list)
 		if err != nil {
 			return fmt.Errorf("unable to understand list result %#v: %v", list, err)
@@ -350,6 +357,7 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 			return fmt.Errorf("unable to understand list result %#v (%v)", list, err)
 		}
 		initTrace.Step("Objects extracted")
+		// 1.3 list对象调r.store.Replace发给store
 		if err := r.syncWith(items, resourceVersion); err != nil {
 			return fmt.Errorf("unable to sync list result: %v", err)
 		}
@@ -424,6 +432,7 @@ func (r *Reflector) ListAndWatch(stopCh <-chan struct{}) error {
 			return err
 		}
 
+		// 1.4 watch handler,循环处理watch到的内容
 		if err := r.watchHandler(start, w, &resourceVersion, resyncerrc, stopCh); err != nil {
 			if err != errorStopRequested {
 				switch {
@@ -492,6 +501,7 @@ loop:
 			newResourceVersion := meta.GetResourceVersion()
 			switch event.Type {
 			case watch.Added:
+				// 1.5 watch到的对象,调对应方法更新到watchCache
 				err := r.store.Add(event.Object)
 				if err != nil {
 					utilruntime.HandleError(fmt.Errorf("%s: unable to add watch event object (%#v) to store: %v", r.name, event.Object, err))

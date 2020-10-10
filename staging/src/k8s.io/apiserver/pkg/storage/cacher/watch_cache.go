@@ -136,6 +136,7 @@ type watchCache struct {
 
 	// Condition on which lists are waiting for the fresh enough
 	// resource version.
+	// 这里学习一些cond的用法
 	cond *sync.Cond
 
 	// Maximum size of history window.
@@ -158,6 +159,7 @@ type watchCache struct {
 	// by endIndex (if cache is full it will be startIndex + capacity).
 	// Both startIndex and endIndex can be greater than buffer capacity -
 	// you should always apply modulo capacity to get an index in cache array.
+	// cache为一个循环的event缓冲区
 	cache      []*watchCacheEvent
 	startIndex int
 	endIndex   int
@@ -166,9 +168,11 @@ type watchCache struct {
 	// history" i.e. from the moment just after the newest cached watched event.
 	// It is necessary to effectively allow clients to start watching at now.
 	// NOTE: We assume that <store> is thread-safe.
+	// store为完整数据的缓冲区,这里保存完整的对象列表,但是不保存对象变化的事件信息
 	store cache.Indexer
 
 	// ResourceVersion up to which the watchCache is propagated.
+	// 当前从etcd拿到的最新resource 版本
 	resourceVersion uint64
 
 	// ResourceVersion of the last list result (populated via Replace() method).
@@ -270,6 +274,7 @@ func (w *watchCache) objectToVersionedRuntimeObject(obj interface{}) (runtime.Ob
 
 // processEvent is safe as long as there is at most one call to it in flight
 // at any point in time.
+// 2.2 reflector的各个动作都会掉processEvent
 func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, updateFunc func(*storeElement) error) error {
 	key, err := w.keyFunc(event.Object)
 	if err != nil {
@@ -281,6 +286,7 @@ func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, upd
 		return err
 	}
 
+	// 2.2.1 构造event,如果有pre版本,填充event字段
 	wcEvent := &watchCacheEvent{
 		Type:            event.Type,
 		Object:          elem.Object,
@@ -310,10 +316,12 @@ func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, upd
 			wcEvent.PrevObjFields = previousElem.Fields
 		}
 
+		// 2.2.2 更新环形缓存
 		w.updateCache(wcEvent)
 		w.resourceVersion = resourceVersion
 		defer w.cond.Broadcast()
 
+		// 2.2.3 写入store
 		return updateFunc(elem)
 	}(); err != nil {
 		return err
@@ -324,6 +332,7 @@ func (w *watchCache) processEvent(event watch.Event, resourceVersion uint64, upd
 	// UpdateResourceVersion in flight at any point in time, which is true now,
 	// because reflector calls them synchronously from its main thread.
 	if w.eventHandler != nil {
+		// 2.2.4 写入incoming
 		w.eventHandler(wcEvent)
 	}
 	return nil
@@ -503,6 +512,7 @@ func (w *watchCache) GetByKey(key string) (interface{}, bool, error) {
 }
 
 // Replace takes slice of runtime.Object as a parameter.
+// 2.1 reflector启动时调list方法,会调replace存入store
 func (w *watchCache) Replace(objs []interface{}, resourceVersion string) error {
 	version, err := w.versioner.ParseResourceVersion(resourceVersion)
 	if err != nil {
@@ -536,12 +546,14 @@ func (w *watchCache) Replace(objs []interface{}, resourceVersion string) error {
 
 	w.startIndex = 0
 	w.endIndex = 0
+	// 2.1.2 replace存入store,这里不会存event,没有调什么eventHandler之类的东西去处理
 	if err := w.store.Replace(toReplace, resourceVersion); err != nil {
 		return err
 	}
 	w.listResourceVersion = version
 	w.resourceVersion = version
 	if w.onReplace != nil {
+		// 2.1.3 执行onReplace,这里只是状态更新
 		w.onReplace()
 	}
 	w.cond.Broadcast()
@@ -604,6 +616,7 @@ func (w *watchCache) GetAllEventsSinceThreadUnsafe(resourceVersion uint64) ([]*w
 		return result, nil
 	}
 	if resourceVersion < oldest-1 {
+		// too old resource version, apiserver这边只保存100个版本, 如果版本太老就会是too old
 		return nil, errors.NewResourceExpired(fmt.Sprintf("too old resource version: %d (%d)", resourceVersion, oldest-1))
 	}
 

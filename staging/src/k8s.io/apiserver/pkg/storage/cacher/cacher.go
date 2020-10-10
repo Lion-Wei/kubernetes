@@ -225,6 +225,7 @@ type Cacher struct {
 	// See: https://golang.org/pkg/sync/atomic/ for more information
 	incomingHWM storage.HighWaterMark
 	// Incoming events that should be dispatched to watchers.
+	// 有watchCache更新时会在这里产生事件
 	incoming chan watchCacheEvent
 
 	sync.RWMutex
@@ -238,13 +239,16 @@ type Cacher struct {
 	ready *ready
 
 	// Underlying storage.Interface.
+	// 对接etcd
 	storage storage.Interface
 
 	// Expected type of objects in the underlying cache.
 	objectType reflect.Type
 
 	// "sliding window" of recent changes of objects and the current state.
+	// watchCache从etcd watch到对象的缓存
 	watchCache *watchCache
+	// 从etcd到watchCache的处理者
 	reflector  *cache.Reflector
 
 	// Versioner is used to handle resource versions.
@@ -259,6 +263,7 @@ type Cacher struct {
 	// watchers is mapping from the value of trigger function that a
 	// watcher is interested into the watchers
 	watcherIdx int
+	// watchers为用于产生watch channel的的watcher集合
 	watchers   indexedWatchers
 
 	// Defines a time budget that can be spend on waiting for not-ready watchers
@@ -782,6 +787,7 @@ func (c *Cacher) processEvent(event *watchCacheEvent) {
 	c.incoming <- *event
 }
 
+// 3 event写入incoming后dispatchEvents
 func (c *Cacher) dispatchEvents() {
 	// Jitter to help level out any aggregate load.
 	bookmarkTimer := c.clock.NewTimer(wait.Jitter(time.Second, 0.25))
@@ -805,6 +811,7 @@ func (c *Cacher) dispatchEvents() {
 			// of a bookmark event or regular Add/Update/Delete operation by
 			// checking if resourceVersion here has changed.
 			if event.Type != watch.Bookmark {
+				// 3.1 dispatchEvent
 				c.dispatchEvent(&event)
 			}
 			lastProcessedResourceVersion = event.ResourceVersion
@@ -896,11 +903,13 @@ func (c *Cacher) dispatchEvent(event *watchCacheEvent) {
 
 		c.blockedWatchers = c.blockedWatchers[:0]
 		for _, watcher := range c.watchersBuffer {
+			// 3.1.1 尝试发送到各个watcher中
 			if !watcher.nonblockingAdd(event) {
 				c.blockedWatchers = append(c.blockedWatchers, watcher)
 			}
 		}
 
+		// 3.1.2 如果有watcher阻塞,尝试等待一段时间发送,这里等待的事件也需要计算,全局协调处理
 		if len(c.blockedWatchers) > 0 {
 			// dispatchEvent is called very often, so arrange
 			// to reuse timers instead of constantly allocating.
@@ -1164,7 +1173,9 @@ func (c *errWatcher) Stop() {
 // cacheWatcher implements watch.Interface
 // this is not thread-safe
 type cacheWatcher struct {
+	// input用于获取从watchCache中拿到的事件
 	input     chan *watchCacheEvent
+	// 外部处理client watch时需要用到的ch
 	result    chan watch.Event
 	done      chan struct{}
 	filter    filterWithAttrsFunc
@@ -1223,6 +1234,7 @@ func (c *cacheWatcher) nonblockingAdd(event *watchCacheEvent) bool {
 }
 
 // Nil timer means that add will not block (if it can't send event immediately, it will break the watcher)
+// 4.2 watchCache调add或nonblockingAdd函数,把event写入input
 func (c *cacheWatcher) add(event *watchCacheEvent, timer *time.Timer) bool {
 	// Try to send the event immediately, without blocking.
 	if c.nonblockingAdd(event) {
@@ -1357,6 +1369,9 @@ func (c *cacheWatcher) sendWatchCacheEvent(event *watchCacheEvent) {
 	}
 }
 
+// 4. watcher每个watch请求一个,用于从cache获取watch对象更新的事件,并发给handler处理
+// process时循环处理函数
+// 4.1 处理初始event,并且后续循环处理后面event
 func (c *cacheWatcher) process(ctx context.Context, initEvents []*watchCacheEvent, resourceVersion uint64) {
 	defer utilruntime.HandleCrash()
 
@@ -1376,6 +1391,7 @@ func (c *cacheWatcher) process(ctx context.Context, initEvents []*watchCacheEven
 	const initProcessThreshold = 500 * time.Millisecond
 	startTime := time.Now()
 	for _, event := range initEvents {
+		// 4.1.1 初始event都发给ch
 		c.sendWatchCacheEvent(event)
 	}
 	objType := c.objectType.String()
@@ -1397,6 +1413,7 @@ func (c *cacheWatcher) process(ctx context.Context, initEvents []*watchCacheEven
 			}
 			// only send events newer than resourceVersion
 			if event.ResourceVersion > resourceVersion {
+				// 4.1.2 后续event 发给ch
 				c.sendWatchCacheEvent(event)
 			}
 		case <-ctx.Done():
