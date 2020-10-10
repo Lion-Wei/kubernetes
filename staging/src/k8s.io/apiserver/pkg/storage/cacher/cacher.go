@@ -433,6 +433,7 @@ func (c *Cacher) Delete(ctx context.Context, key string, out runtime.Object, pre
 }
 
 // Watch implements storage.Interface.
+// 03 生成watch.Interface的实现,生成一个新的watcher,并加入到cacher中.
 func (c *Cacher) Watch(ctx context.Context, key string, opts storage.ListOptions) (watch.Interface, error) {
 	pred := opts.Predicate
 	watchRV, err := c.versioner.ParseResourceVersion(opts.ResourceVersion)

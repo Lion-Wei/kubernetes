@@ -262,6 +262,7 @@ func (c LegacyRESTStorageProvider) NewLegacyRESTStorage(restOptionsGetter generi
 		return LegacyRESTStorage{}, genericapiserver.APIGroupInfo{}, err
 	}
 
+	// 02 这里生成的storage作为restStorage最终提供Watcher接口
 	serviceRest, serviceRestProxy := servicestore.NewREST(serviceRESTStorage,
 		endpointsStorage,
 		podStorage.Pod,

@@ -260,6 +260,7 @@ func ListResource(r rest.Lister, rw rest.Watcher, scope *RequestScope, forceWatc
 			ctx, cancel := context.WithTimeout(ctx, timeout)
 			defer cancel()
 			// 2. 调用对应资源的store watch接口，获取watcher，
+			// 02 watcher从rw获取，rw为restWatcher缩写，实现pkg/registry/rest.Watch接口
 			watcher, err := rw.Watch(ctx, &opts)
 			if err != nil {
 				scope.err(err, w, req)

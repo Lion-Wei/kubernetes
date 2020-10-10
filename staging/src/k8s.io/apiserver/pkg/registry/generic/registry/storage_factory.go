@@ -67,6 +67,7 @@ func StorageWithCacher() generic.StorageDecorator {
 			Codec:          storageConfig.Codec,
 		}
 		// cacher实现apiserver\pkg\storage.Interface接口，watch请求首先调用该方法下的Watch方法
+		// 07 , 05中返回作为storage的对象
 		cacher, err := cacherstorage.NewCacherFromConfig(cacherConfig)
 		if err != nil {
 			return nil, func() {}, err

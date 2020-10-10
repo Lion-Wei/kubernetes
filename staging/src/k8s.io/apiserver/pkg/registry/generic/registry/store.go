@@ -1109,6 +1109,7 @@ func (e *Store) finalizeDelete(ctx context.Context, obj runtime.Object, runHooks
 // 这里的store应该不是直接对etcd 的store，是外部请求进来的实际执行函数
 // 它作为一个通用的框架，其他资源可以在它基础上定制化
 // 2.1 资源对象生成watcher，
+// 03 generic中的watch
 func (e *Store) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
 	label := labels.Everything()
 	if options != nil && options.LabelSelector != nil {
@@ -1146,6 +1147,8 @@ func (e *Store) WatchPredicate(ctx context.Context, p storage.SelectionPredicate
 		// optimization is skipped
 	}
 
+	// 04 apimachinery/pkg/watch interface这里生成，还是使用了下层的e.Storage.Storage的方法
+	// 上面这一层是为了dryRun做的封装?
 	w, err := e.Storage.WatchList(ctx, e.KeyRootFunc(ctx), storageOpts)
 	if err != nil {
 		return nil, err
@@ -1274,6 +1277,7 @@ func (e *Store) CompleteWithOptions(options *generic.StoreOptions) error {
 		return err
 	}
 
+	// 06 rest是每个api一个，这里的options也是。RESTOptions
 	opts, err := options.RESTOptions.GetRESTOptions(e.DefaultQualifiedResource)
 	if err != nil {
 		return err
@@ -1341,6 +1345,8 @@ func (e *Store) CompleteWithOptions(options *generic.StoreOptions) error {
 	if e.Storage.Storage == nil {
 		e.Storage.Codec = opts.StorageConfig.Codec
 		var err error
+		// 04 在CompleteWithOptions中完成e核心部分构建，其中就包括storage
+		// 05 这里用到的Decorator是StorageDecorator的一个实现，随opt初始化
 		e.Storage.Storage, e.DestroyFunc, err = opts.Decorator(
 			opts.StorageConfig,
 			prefix,

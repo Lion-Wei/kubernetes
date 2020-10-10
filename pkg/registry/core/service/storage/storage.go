@@ -41,6 +41,7 @@ type GenericREST struct {
 func NewGenericREST(optsGetter generic.RESTOptionsGetter, serviceCIDR net.IPNet, hasSecondary bool) (*GenericREST, *StatusREST, error) {
 	strategy, _ := registry.StrategyForServiceCIDRs(serviceCIDR, hasSecondary)
 
+	// 03 GenericREST生成通过rest，类似继承多态的概念，watch为通用方法，在generic中
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &api.Service{} },
 		NewListFunc:              func() runtime.Object { return &api.ServiceList{} },
@@ -54,6 +55,7 @@ func NewGenericREST(optsGetter generic.RESTOptionsGetter, serviceCIDR net.IPNet,
 
 		TableConvertor: printerstorage.TableConvertor{TableGenerator: printers.NewTableGenerator().With(printersinternal.AddHandlers)},
 	}
+	// 06 optsGetter由外部传入
 	options := &generic.StoreOptions{RESTOptions: optsGetter}
 	if err := store.CompleteWithOptions(options); err != nil {
 		return nil, nil, err

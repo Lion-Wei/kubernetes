@@ -245,6 +245,7 @@ func (a *APIInstaller) registerResourceHandlers(path string, storage rest.Storag
 	collectionDeleter, isCollectionDeleter := storage.(rest.CollectionDeleter)
 	updater, isUpdater := storage.(rest.Updater)
 	patcher, isPatcher := storage.(rest.Patcher)
+	// 02 这里断言的watcher，传入最终作为rw使用
 	watcher, isWatcher := storage.(rest.Watcher)
 	connecter, isConnecter := storage.(rest.Connecter)
 	storageMeta, isMetadata := storage.(rest.StorageMetadata)

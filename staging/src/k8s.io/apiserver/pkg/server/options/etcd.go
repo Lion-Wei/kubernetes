@@ -248,6 +248,7 @@ func (f *SimpleRestOptionsFactory) GetRESTOptions(resource schema.GroupResource)
 			ret.Decorator = generic.UndecoratedStorage
 		} else {
 			// 创建带cache的store
+			// 05 GetRESTOptions，后面的Decorator, 真正用于生成storage
 			ret.Decorator = genericregistry.StorageWithCacher()
 		}
 	}

@@ -161,6 +161,7 @@ func (rs *REST) List(ctx context.Context, options *metainternalversion.ListOptio
 }
 
 func (rs *REST) Watch(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
+	// 03 services watch方法
 	return rs.services.Watch(ctx, options)
 }
 

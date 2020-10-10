@@ -108,6 +108,7 @@ func serveWatch(watcher watch.Interface, scope *RequestScope, mediaTypeOptions n
 	ctx := req.Context()
 
 	server := &WatchServer{
+		// 01 watching从watcher初始化
 		Watching: watcher,
 		Scope:    scope,
 
@@ -161,6 +162,7 @@ type WatchServer struct {
 
 // ServeHTTP serves a series of encoded events via HTTP with Transfer-Encoding: chunked
 // or over a websocket connection.
+// 入口侧，watchServer.ServeHTTP
 func (s *WatchServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	kind := s.Scope.Kind
 	metrics.RegisteredWatchers.WithLabelValues(kind.Group, kind.Version, kind.Kind).Inc()
@@ -182,6 +184,7 @@ func (s *WatchServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// framer作为缓冲区的writer？
 	framer := s.Framer.NewFrameWriter(w)
 	if framer == nil {
 		// programmer error
@@ -197,15 +200,18 @@ func (s *WatchServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer cleanup()
 
 	// begin the stream
+	// 1. begin the stream
 	w.Header().Set("Content-Type", s.MediaType)
 	w.Header().Set("Transfer-Encoding", "chunked")
 	w.WriteHeader(http.StatusOK)
+	// flush用于发送缓冲区的数据到client
 	flusher.Flush()
 
 	var unknown runtime.Unknown
 	internalEvent := &metav1.InternalEvent{}
 	outEvent := &metav1.WatchEvent{}
 	buf := &bytes.Buffer{}
+	// 01 从watching区resultChan，实现apimachinery/pkg/watch interface
 	ch := s.Watching.ResultChan()
 	done := req.Context().Done()
 
@@ -215,6 +221,7 @@ func (s *WatchServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			return
 		case <-timeoutCh:
 			return
+			// 2. 循环从ch获取event，处理，发出
 		case event, ok := <-ch:
 			if !ok {
 				// End of results.
@@ -247,6 +254,7 @@ func (s *WatchServer) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 				// client disconnect.
 				return
 			}
+			// encode发送数据到缓冲区，e 作为stream encoder
 			if err := e.Encode(outEvent); err != nil {
 				utilruntime.HandleError(fmt.Errorf("unable to encode watch object %T: %v (%#v)", outEvent, err, e))
 				// client disconnect.
