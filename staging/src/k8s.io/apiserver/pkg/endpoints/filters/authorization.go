@@ -56,6 +56,7 @@ func WithAuthorization(handler http.Handler, a authorizer.Authorizer, s runtime.
 			responsewriters.InternalError(w, req, err)
 			return
 		}
+		// // 1.2.1.1.1.1 执行Authorize, 我们直接查看它的实现.
 		authorized, reason, err := a.Authorize(ctx, attributes)
 		// an authorizer like RBAC could encounter evaluation errors and still allow the request, so authorizer decision is checked before error here.
 		if authorized == authorizer.DecisionAllow {

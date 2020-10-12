@@ -72,9 +72,11 @@ func (v *authorizingVisitor) visit(source fmt.Stringer, rule *rbacv1.PolicyRule,
 	return true
 }
 
+// rbac authorize
 func (r *RBACAuthorizer) Authorize(ctx context.Context, requestAttributes authorizer.Attributes) (authorizer.Decision, string, error) {
 	ruleCheckingVisitor := &authorizingVisitor{requestAttributes: requestAttributes}
 
+	// 功能部分
 	r.authorizationRuleResolver.VisitRulesFor(requestAttributes.GetUser(), requestAttributes.GetNamespace(), ruleCheckingVisitor.visit)
 	if ruleCheckingVisitor.allowed {
 		return authorizer.DecisionAllow, ruleCheckingVisitor.reason, nil

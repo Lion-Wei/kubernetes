@@ -95,6 +95,7 @@ func NewAPIServerHandler(name string, s runtime.NegotiatedSerializer, handlerCha
 	}
 
 	return &APIServerHandler{
+		// 1.4.1.1.1 给handler添加filter
 		FullHandlerChain:   handlerChainBuilder(director),
 		GoRestfulContainer: gorestfulContainer,
 		NonGoRestfulMux:    nonGoRestfulMux,

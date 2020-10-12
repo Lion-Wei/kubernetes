@@ -303,6 +303,7 @@ func CreateKubeAPIServerConfig(
 	[]admission.PluginInitializer,
 	error,
 ) {
+	// 1.2.1
 	genericConfig, versionedInformers, insecureServingInfo, serviceResolver, pluginInitializers, admissionPostStartHook, storageFactory, err := buildGenericConfig(s.ServerRunOptions, proxyTransport)
 	if err != nil {
 		return nil, nil, nil, nil, err
@@ -451,6 +452,7 @@ func buildGenericConfig(
 	storageFactory *serverstorage.DefaultStorageFactory,
 	lastErr error,
 ) {
+	// 1.2.1.1
 	genericConfig = genericapiserver.NewConfig(legacyscheme.Codecs)
 	genericConfig.MergedResourceConfig = controlplane.DefaultAPIResourceConfigSource()
 

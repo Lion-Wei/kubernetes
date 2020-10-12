@@ -288,6 +288,7 @@ func NewConfig(codecs serializer.CodecFactory) *Config {
 	defaultHealthChecks := []healthz.HealthChecker{healthz.PingHealthz, healthz.LogHealthz}
 	return &Config{
 		Serializer:                  codecs,
+		// 1.2.1.1.1 后续再构造handler中用到,这里函数主要工作是添加各种filter
 		BuildHandlerChainFunc:       DefaultBuildHandlerChain,
 		HandlerChainWaitGroup:       new(utilwaitgroup.SafeWaitGroup),
 		LegacyAPIGroupPrefixes:      sets.NewString(DefaultLegacyAPIPrefix),
